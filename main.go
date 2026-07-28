@@ -16,7 +16,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello world from uagents8!")
+		fmt.Fprintln(w, "Hello world from GGolang agents!")
 	})
 
 	fmt.Printf("Starting hello-world agent on 0.0.0.0:%s\n", port)
