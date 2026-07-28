@@ -1,3 +1,3 @@
-module golang_hello_world
+module hello
 
-go 1.26.4
+go 1.22
