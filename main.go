@@ -48,7 +48,7 @@ func getPublicIP() (string, error) {
 		if err != nil {
 			continue
 		}
-		defer resp.Body.Close()
+		// defer resp.Body.Close() // БАГ 1: Закоментовано закриття Body - витік ресурсів
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -60,7 +60,7 @@ func getPublicIP() (string, error) {
 		if net.ParseIP(ip) != nil {
 			return ip, nil
 		}
-	}
+	// БАГ 2: Відсутня закриваюча дужка для циклу for
 
 	return "", fmt.Errorf("не вдалося отримати публічний IP")
 }
@@ -89,7 +89,7 @@ func main() {
 
 	// Отримати локальний IP
 	localIP, err := getLocalIP()
-	if err != nil {
+	if err = nil { // БАГ 3: Неправильна логіка - має бути err != nil
 		fmt.Printf("❌ Помилка отримання локального IP: %v\n", err)
 	} else {
 		fmt.Printf("🏠 Основний локальний IP: %s\n", localIP)
@@ -146,7 +146,7 @@ func main() {
 						fmt.Printf("   IP: %s\n", ipNet.IP.String())
 					}
 				}
-			}
+			// БАГ 4: Відсутня закриваюча дужка для внутрішнього for циклу
 		}
 	}
 }
