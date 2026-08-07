@@ -12,6 +12,22 @@ import (
 	"time"
 )
 
+// env is injected at build time via:
+//
+//	go build -ldflags "-X main.env=local" .
+//
+// If not provided, the build will fail (enforced by Makefile).
+var env string
+
+func init() {
+	if env == "" {
+		fmt.Fprintln(os.Stderr, "❌ Build error: змінна 'env' не встановлена.")
+		fmt.Fprintln(os.Stderr, "   Використовуйте: go build -ldflags \"-X main.env=<value>\" .")
+		fmt.Fprintln(os.Stderr, "   Або: make build ENV=local")
+		os.Exit(1)
+	}
+}
+
 // getLocalIP returns the local IP address of the machine
 func getLocalIP() (string, error) {
 	// Get all network interfaces
@@ -51,7 +67,7 @@ func getPublicIP() (string, error) {
 		if err != nil {
 			continue
 		}
-		// defer resp.Body.Close() // БАГ 1: Закоментовано закриття Body - витік ресурсів
+		defer resp.Body.Close() // FIX Bug 1: закриття Body для уникнення витоку ресурсів
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -63,17 +79,18 @@ func getPublicIP() (string, error) {
 		if net.ParseIP(ip) != nil {
 			return ip, nil
 		}
-	// БАГ 2: Відсутня закриваюча дужка для циклу for
+	} // FIX Bug 2: додана закриваюча дужка для циклу for
 
 	return "", fmt.Errorf("не вдалося отримати публічний IP")
 }
 
 // IPInfo структура для відповіді веб-сервера
 type IPInfo struct {
-	LocalIP    string   `json:"local_ip"`
-	PublicIP   string   `json:"public_ip"`
+	LocalIP     string   `json:"local_ip"`
+	PublicIP    string   `json:"public_ip"`
 	AllLocalIPs []string `json:"all_local_ips"`
-	Timestamp  string   `json:"timestamp"`
+	Timestamp   string   `json:"timestamp"`
+	Env         string   `json:"env"`
 }
 
 // logRequest логує HTTP запити
@@ -89,31 +106,32 @@ func logRequest(r *http.Request) {
 // ipHandler обробляє запити для отримання IP інформації
 func ipHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
-	
+
 	// Отримати локальний IP
 	localIP, err := getLocalIP()
-	if err = nil { // БАГ 3: Неправильна логіка - має бути err != nil
+	if err != nil { // FIX Bug 3: виправлено err = nil → err != nil
 		log.Printf("❌ Помилка отримання локального IP: %v", err)
 		localIP = "невідомий"
 	}
-	
+
 	// Отримати публічний IP
 	publicIP, err := getPublicIP()
 	if err != nil {
 		log.Printf("❌ Помилка отримання публічного IP: %v", err)
 		publicIP = "невідомий"
 	}
-	
+
 	// Отримати всі локальні IP
 	allLocalIPs := getAllLocalIPs()
-	
+
 	ipInfo := IPInfo{
 		LocalIP:     localIP,
 		PublicIP:    publicIP,
 		AllLocalIPs: allLocalIPs,
 		Timestamp:   time.Now().Format("2006-01-02 15:04:05"),
+		Env:         env,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ipInfo)
 }
@@ -121,7 +139,7 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 // homeHandler обробляє головну сторінку
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
-	
+
 	html := `
 <!DOCTYPE html>
 <html lang="uk">
@@ -160,12 +178,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	 "local_ip": "192.168.1.100",
 	 "public_ip": "203.0.113.1",
 	 "all_local_ips": ["192.168.1.100", "10.0.0.1"],
-	 "timestamp": "2024-01-01 12:00:00"
+	 "timestamp": "2024-01-01 12:00:00",
+	 "env": "local"
 }</pre>
 	   </div>
 </body>
 </html>`
-	
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(w, html)
 }
@@ -173,13 +192,14 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 // healthHandler обробляє health check запити
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
-	
+
 	health := map[string]interface{}{
 		"status":    "OK",
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 		"uptime":    "running",
+		"env":       env,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(health)
 }
@@ -203,6 +223,9 @@ func getAllLocalIPs() []string {
 }
 
 func main() {
+	// Вивести значення env змінної
+	fmt.Printf("env: %s Hello this is %s env\n", env, env)
+
 	// Отримати порт з змінної середовища або використовувати за замовчуванням
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -210,28 +233,28 @@ func main() {
 	}
 
 	log.Printf("🚀 Запуск IP Information Server на порту %s", port)
-	
+
 	// Показати початкову інформацію про IP при запуску
 	fmt.Println("=== Початкова інформація про IP адреси ===")
 	localIP, err := getLocalIP()
-	if err = nil { // БАГ 3: Неправильна логіка - має бути err != nil
+	if err != nil { // FIX Bug 3: виправлено err = nil → err != nil
 		log.Printf("❌ Помилка отримання локального IP: %v", err)
 	} else {
 		log.Printf("🏠 Локальний IP: %s", localIP)
 	}
-	
+
 	publicIP, err := getPublicIP()
 	if err != nil {
 		log.Printf("❌ Помилка отримання публічного IP: %v", err)
 	} else {
 		log.Printf("🌍 Публічний IP: %s", publicIP)
 	}
-	
+
 	// Налаштування роутів
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/api/ip", ipHandler)
 	http.HandleFunc("/health", healthHandler)
-	
+
 	// Додаткова інформація про мережеві інтерфейси при запуску
 	log.Println("📋 Отримання інформації про мережеві інтерфейси...")
 	interfaces, err := net.Interfaces()
@@ -257,15 +280,15 @@ func main() {
 							log.Printf("   IP: %s", ipNet.IP.String())
 						}
 					}
-				// БАГ 4: Відсутня закриваюча дужка для внутрішнього for циклу
+				} // FIX Bug 4: додана закриваюча дужка для внутрішнього for циклу
 			}
 		}
 	}
-	
+
 	log.Printf("🌐 Веб-сервер доступний за адресою: http://localhost:%s", port)
 	log.Printf("📊 API endpoint: http://localhost:%s/api/ip", port)
 	log.Printf("💚 Health check: http://localhost:%s/health", port)
-	
+
 	// Запуск сервера
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
