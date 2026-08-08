@@ -1,8 +1,8 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
 FROM golang:1.22-alpine AS builder
 
-# Build argument — передається через docker build --build-arg ENV=local
-ARG ENV=local
+# Build argument — обов'язково передається через docker build --build-arg ENV=local
+ARG ENV
 
 WORKDIR /app
 
@@ -14,6 +14,12 @@ RUN go mod download
 
 # Копіюємо весь вихідний код
 COPY . .
+
+# Перевіряємо, що ENV передано і не порожнє — інакше build падає
+RUN if [ -z "${ENV}" ]; then \
+        echo "❌ Build error: ENV is not set. Use --build-arg ENV=<value>" >&2; \
+        exit 1; \
+    fi
 
 # Збираємо статичний бінарник з підстановкою змінної env
 RUN CGO_ENABLED=0 GOOS=linux go build \
