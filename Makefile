@@ -1,18 +1,15 @@
 ## Usage:
-##   make build ENV=local   → builds with env=local
-##   make build             → fails with an error (ENV not set)
-##   make run ENV=local     → builds and runs
+##   make build             → builds the binary (ENV not required at build time)
+##   make run ENV=local     → builds and runs with ENV=local
+##   make run               → builds and runs; fails at startup (ENV not set)
 
 .PHONY: build run clean
 
 build:
-ifndef ENV
-	$(error ❌ ENV is not set. Usage: make build ENV=local)
-endif
-	go build -ldflags "-X main.env=$(ENV)" -o app .
+	go build -o app .
 
 run: build
-	./app
+	ENV=$(ENV) ./app
 
 clean:
 	rm -f app

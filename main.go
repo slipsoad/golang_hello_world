@@ -12,18 +12,20 @@ import (
 	"time"
 )
 
-// env is injected at build time via:
+// env is read at runtime from the ENV environment variable.
 //
-//	go build -ldflags "-X main.env=local" .
+//	ENV=local ./app
+//	docker run -e ENV=local ...
 //
-// If not provided, the build will fail (enforced by Makefile).
+// If not set, the app refuses to start.
 var env string
 
 func init() {
+	env = os.Getenv("ENV")
 	if env == "" {
-		fmt.Fprintln(os.Stderr, "❌ Build error: змінна 'env' не встановлена.")
-		fmt.Fprintln(os.Stderr, "   Використовуйте: go build -ldflags \"-X main.env=<value>\" .")
-		fmt.Fprintln(os.Stderr, "   Або: make build ENV=local")
+		fmt.Fprintln(os.Stderr, "❌ Startup error: змінна оточення 'ENV' не встановлена.")
+		fmt.Fprintln(os.Stderr, "   Використовуйте: ENV=local ./app")
+		fmt.Fprintln(os.Stderr, "   Або: docker run -e ENV=local ...")
 		os.Exit(1)
 	}
 }
