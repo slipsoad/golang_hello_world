@@ -53,10 +53,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         public_ip = get_public_ip()
         
         # Create response message with both IP addresses
-        message = f"""Hello world from uagents8!
+        env_lines = "\n".join(f"{key}={value}" for key, value in sorted(os.environ.items()))
+
+        message = f"""Hello world from World8!
 Local IP address: {local_ip}
 Public IP address: {public_ip}
 Server port: {PORT}
+This is environment {os.environ.get("ENV")}
+
+Environment variables:
+{env_lines}
 """
         self.wfile.write(message.encode('utf-8'))
 
