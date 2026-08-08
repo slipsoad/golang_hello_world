@@ -63,7 +63,7 @@ func getPublicIP() (string, error) {
 		if net.ParseIP(ip) != nil {
 			return ip, nil
 		}
-	// БАГ 2: Відсутня закриваюча дужка для циклу for
+	}
 
 	return "", fmt.Errorf("не вдалося отримати публічний IP")
 }
@@ -92,7 +92,7 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 	
 	// Отримати локальний IP
 	localIP, err := getLocalIP()
-	if err = nil { // БАГ 3: Неправильна логіка - має бути err != nil
+	if err != nil {
 		log.Printf("❌ Помилка отримання локального IP: %v", err)
 		localIP = "невідомий"
 	}
@@ -214,7 +214,7 @@ func main() {
 	// Показати початкову інформацію про IP при запуску
 	fmt.Println("=== Початкова інформація про IP адреси ===")
 	localIP, err := getLocalIP()
-	if err = nil { // БАГ 3: Неправильна логіка - має бути err != nil
+	if err != nil {
 		log.Printf("❌ Помилка отримання локального IP: %v", err)
 	} else {
 		log.Printf("🏠 Локальний IP: %s", localIP)
@@ -257,7 +257,7 @@ func main() {
 							log.Printf("   IP: %s", ipNet.IP.String())
 						}
 					}
-				// БАГ 4: Відсутня закриваюча дужка для внутрішнього for циклу
+				}
 			}
 		}
 	}
